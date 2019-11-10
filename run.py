@@ -90,7 +90,7 @@ def do_train(sess, args):
     # Start the queue runners.
     coord = tf.train.Coordinator()
     threads = tf.train.start_queue_runners(sess=sess, coord=coord)
-    
+
     # Setup a summary writer
     summary_writer = tf.summary.FileWriter(args.log_dir, sess.graph)
 
@@ -294,8 +294,8 @@ def main():  # pylint: disable=unused-argument
     parser.add_argument('--num_prefetch', default= 2000 , type= int, action= 'store', help= 'The number of pre-fetched images in the training queue, reduce this to consume less RAM')
     parser.add_argument('--num_epochs', default= 55, type= int, action= 'store', help= 'The number of training epochs')
     parser.add_argument('--path_prefix', default= './', action='store', help= 'the prefix address for images')
-    parser.add_argument('--train_info', default= None, action= 'store', help= 'Name of the file containing addresses and labels of training images')
-    parser.add_argument('--val_info', default= None, action= 'store', help= 'Name of the file containing addresses and labels of validation images')
+    parser.add_argument('--train_info', default= 'train_imgs.txt', action= 'store', help= 'Name of the file containing addresses and labels of training images')
+    parser.add_argument('--val_info', default= 'val_imgs.txt', action= 'store', help= 'Name of the file containing addresses and labels of validation images')
     parser.add_argument('--shuffle', default= True, type= bool, action= 'store',help= 'Shuffle training data or not')
     parser.add_argument('--num_threads', default= 20, type= int, action='store', help= 'The number of threads for loading data')
     parser.add_argument('--log_dir', default= None, action= 'store', help= 'Path for saving Tensorboard info and checkpoints')
