@@ -61,6 +61,15 @@ def do_train(sess, args):
         optimizer = utils.get_optimizer(args.optimizer, lr)
 
         perm_save_epochs = np.linspace(0, args.num_epochs, args.num_save_model_segments + 1).astype(int)
+
+        # make checkpoint directories and configure base checkpoint paths
+        checkpoint_dir = os.path.join(args.log_dir, "checkpoints")
+        perm_checkpoint_dir = os.path.join(checkpoint_dir, "permanent")
+        latest_checkpoint_path = os.path.join(checkpoint_dir, args.snapshot_prefix)
+        perm_checkpoint_path = os.path.join(perm_checkpoint_dir, "epoch")
+        os.makedirs(checkpoint_dir, exist_ok=True)
+        os.makedirs(perm_checkpoint_dir, exist_ok=True)
+
         # build the computational graph using the provided configuration.
         dnn_model = model(images_ph, labels_ph, utils.loss, optimizer, wd, args.architecture, args.num_classes,
                           is_training_ph, args.transfer_mode,
@@ -96,6 +105,8 @@ def do_train(sess, args):
 
         # Set the start epoch number
         start_epoch = sess.run(epoch_number + 1)
+        if start_epoch - 1 in perm_save_epochs:
+            dnn_model.save(sess, perm_checkpoint_path, global_step=start_epoch - 1)
 
         # Start the queue runners.
         coord = tf.train.Coordinator()
@@ -150,14 +161,16 @@ def do_train(sess, args):
                                            feed_dict={images_ph: img, labels_ph: lbl, is_training_ph: True})
                     summary_writer.add_summary(summary_str, args.num_batches * epoch + step)
                     if args.log_debug_info:
-                        summary_writer.add_run_metadata(run_metadata, 'epoch%d step%d' % (epoch, step))
+                        summary_writer.add_run_metadata(args.run_metadata, 'epoch%d step%d' % (epoch, step))
+
+                    # save latest model
+                    dnn_model.save(sess, latest_checkpoint_path)
 
             # Save the model checkpoint periodically after each training epoch
-            checkpoint_path = os.path.join(args.log_dir, args.snapshot_prefix)
             if epoch in perm_save_epochs:
-                dnn_model.save(sess, checkpoint_path, global_step=epoch)
-            else:
-                dnn_model.save(sess, checkpoint_path)
+                dnn_model.save(sess, perm_checkpoint_path, global_step=epoch)
+
+            dnn_model.save(sess, latest_checkpoint_path)
 
             print("Epoch %d of %d ended. a checkpoint saved at %s" % (
             epoch, start_epoch + args.num_epochs - 1, args.log_dir))
@@ -347,7 +360,7 @@ def main():  # pylint: disable=unused-argument
                         help='The number of threads for loading data')
     parser.add_argument('--log_dir', default=None, action='store',
                         help='Path for saving Tensorboard info and checkpoints')
-    parser.add_argument('--snapshot_prefix', default='snapshot', action='store', help='Prefix for checkpoint files')
+    parser.add_argument('--snapshot_prefix', default='latest_ckpt', action='store', help='Prefix for checkpoint files')
     parser.add_argument('--num_save_model_segments', default=10, help='Number of permanent checkpoints to keep')
     parser.add_argument('--architecture', default='resnet50', help='The DNN architecture')
     parser.add_argument('--run_name', default='Run' + str(time.strftime("-%d-%m-%Y_%H-%M-%S")), action='store',
@@ -405,7 +418,7 @@ def main():  # pylint: disable=unused-argument
             args.num_samples, _ = utils.count_input_records(args.train_info, args.batch_size)
 
         # Counting number of validation examples
-        if args.val_info is not None:
+        if args.val_info not in (None, 'None'):
             args.num_val_samples, args.num_val_batches = utils.count_input_records(args.val_info, args.batch_size)
             args.run_validation = True
         else:
@@ -413,7 +426,7 @@ def main():  # pylint: disable=unused-argument
 
         # creating the logging directory
         if args.log_dir is None:
-            args.log_dir = args.architecture + "_" + args.run_name
+            args.log_dir = "experiments/" + args.architecture + "_" + args.run_name
 
         if tf.gfile.Exists(args.log_dir):
             tf.gfile.DeleteRecursively(args.log_dir)

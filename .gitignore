@@ -106,8 +106,8 @@ venv.bak/
 # IDE
 .idea
 
-# run data
-*_Run*/
+# experiments
+experiments
 
 # image path txt files
 *.txt

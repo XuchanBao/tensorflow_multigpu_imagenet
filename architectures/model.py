@@ -7,6 +7,7 @@ from .googlenet import *
 from .common import SAVE_VARIABLES
 
 import re
+from termcolor import colored
 
 """
 This class simulates a deep learning model.
@@ -279,6 +280,10 @@ class model:
             self.saver = tf.train.Saver(tf.get_collection(SAVE_VARIABLES), max_to_keep=self.max_to_keep)
 
         self.saver.save(sess, path, global_step)
+        if global_step is None:
+            print(colored(">>> Saved latest model to {}".format(path), 'blue'))
+        else:
+            print(colored(">>> Saved permanent model to {}-{}".format(path, global_step), 'blue'))
 
     """ This method loads a set of pretrained parameters from a snapshot file.
     
