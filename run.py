@@ -101,7 +101,10 @@ def do_train(sess, args):
         sess.run(init)
 
         if args.retrain_from is not None:
-            dnn_model.load(sess, args.retrain_from)
+            if args.retrain_from == "latest":
+                dnn_model.load(sess, latest_checkpoint_path)
+            else:
+                dnn_model.load(sess, args.retrain_from)
 
         # Set the start epoch number
         start_epoch = sess.run(epoch_number + 1)
@@ -360,6 +363,7 @@ def main():  # pylint: disable=unused-argument
                         help='The number of threads for loading data')
     parser.add_argument('--log_dir', default=None, action='store',
                         help='Path for saving Tensorboard info and checkpoints')
+    parser.add_argument('--delete_log_dir_content', default=False, type=bool, help='Delete existing content in log_dir')
     parser.add_argument('--snapshot_prefix', default='latest_ckpt', action='store', help='Prefix for checkpoint files')
     parser.add_argument('--num_save_model_segments', default=10, help='Number of permanent checkpoints to keep')
     parser.add_argument('--architecture', default='resnet50', help='The DNN architecture')
@@ -428,7 +432,7 @@ def main():  # pylint: disable=unused-argument
         if args.log_dir is None:
             args.log_dir = "experiments/" + args.architecture + "_" + args.run_name
 
-        if tf.gfile.Exists(args.log_dir):
+        if args.delete_log_dir_content and tf.gfile.Exists(args.log_dir):
             tf.gfile.DeleteRecursively(args.log_dir)
         tf.gfile.MakeDirs(args.log_dir)
         print("Saving everything in " + args.log_dir)

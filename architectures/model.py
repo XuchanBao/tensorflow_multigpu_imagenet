@@ -302,13 +302,13 @@ class model:
     """
 
     def load(self, sess, path):
-        ckpt = tf.train.get_checkpoint_state(path)
         if self.pretrained_loader is None:
             if self.transfer_mode[0] == 0:
                 self.pretrained_loader = tf.train.Saver(tf.get_collection(SAVE_VARIABLES))
             else:
                 self.pretrained_loader = tf.train.Saver(var_list=self.exclude())
-        self.pretrained_loader.restore(sess, ckpt.model_checkpoint_path)
+        self.pretrained_loader.restore(sess, path)
+        print(colored("<<< Restored model from {}".format(path), 'blue'))
 
     """
        exclude variables when loading a snapshot, this is useful for transfer learning
