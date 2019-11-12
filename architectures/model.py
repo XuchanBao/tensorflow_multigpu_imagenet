@@ -188,6 +188,8 @@ class model:
     def train_ops(self):
         if self.num_gpus == 1:
             grads, last_grads, batchnorm_updates, cross_entropy_mean, top1acc, topnacc = self.get_grads('/gpu:0')
+        elif self.num_gpus == 0:
+            grads, last_grads, batchnorm_updates, cross_entropy_mean, top1acc, topnacc = self.get_grads('/cpu:0')
         else:
             grads, last_grads, batchnorm_updates, cross_entropy_mean, top1acc, topnacc = self.multigpu_grads()
 
@@ -243,7 +245,12 @@ class model:
     """
 
     def evaluate_ops(self, inference_only):
-        with tf.device('/gpu:0'):
+        if self.num_gpus == 0:
+            device = '/cpu:0'
+        else:
+            device = '/gpu:0'
+
+        with tf.device(device):
             # Build a Graph that computes the logits predictions from the
             # inference model.
             logits = self.inference()
