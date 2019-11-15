@@ -1,5 +1,6 @@
 import os
 import cv2
+import argparse
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.platform import gfile
@@ -11,9 +12,17 @@ import utils
 from images.caffe_classes import class_names
 
 
-save_model_filename = 'epoch-1_1'
-checkpoint_path = 'experiments/googlenet/checkpoints/{}'.format(save_model_filename)
-save_pb_dir = 'experiments/googlenet/pb'
+save_model_filename = 'epoch-3_2'
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--checkpoint_dir', type=str,
+                    default='experiments/googlenet/checkpoints')
+parser.add_argument('--save_pb_dir', type=str, default='experiments/googlenet/pb')
+args = parser.parse_args()
+
+checkpoint_path = "{}/{}".format(args.checkpoint_dir, save_model_filename)
+save_pb_dir = args.save_pb_dir
+
 os.makedirs(save_pb_dir, exist_ok=True)
 
 # -------------- Prepare images --------------------------
