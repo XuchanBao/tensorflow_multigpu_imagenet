@@ -60,7 +60,7 @@ def do_train(sess, args):
         # Create an optimizer that performs gradient descent.
         optimizer = utils.get_optimizer(args.optimizer, lr)
 
-        perm_save_epochs = np.linspace(0, args.num_epochs, args.num_save_model_segments + 1).astype(int)
+        perm_save_epochs = np.linspace(0, args.num_epochs, args.num_save_model_segments + 1)
 
         # make checkpoint directories and configure base checkpoint paths
         checkpoint_dir = os.path.join(args.log_dir, "checkpoints")
@@ -107,7 +107,11 @@ def do_train(sess, args):
                 dnn_model.load(sess, args.retrain_from)
 
         # Set the start epoch number
-        start_epoch = sess.run(epoch_number + 1)
+        if args.overwrite_start_epoch_num is None:
+            start_epoch = sess.run(epoch_number + 1)
+        else:   # if overwrite start epoch in args
+            start_epoch = args.overwrite_start_epoch_num
+
         if start_epoch - 1 in perm_save_epochs:
             dnn_model.save(sess, perm_checkpoint_path, global_step=start_epoch - 1)
 
@@ -119,12 +123,12 @@ def do_train(sess, args):
         summary_writer = tf.summary.FileWriter(args.log_dir, sess.graph)
 
         # The main training loop
-        for epoch in range(start_epoch, start_epoch + args.num_epochs):
+        for epoch in range(start_epoch, args.num_epochs):
 
             # update epoch_number
             sess.run(epoch_number.assign(epoch))
 
-            print("Epoch %d of %d started" % (epoch, start_epoch + args.num_epochs - 1))
+            print("Epoch %d of %d started" % (epoch, args.num_epochs))
             # Trainig batches
             for step in range(args.num_batches):
                 sess.run(global_step.assign(step + epoch * args.num_batches))
@@ -155,7 +159,7 @@ def do_train(sess, args):
                     format_str = ('%s: epoch %d of %d, step %d of %d, loss = %.2f, Top-1 = %.2f Top-' + str(
                         args.top_n) + ' = %.2f (%.1f examples/sec; %.3f sec/batch)')
                     print(format_str % (
-                    datetime.now(), epoch, start_epoch + args.num_epochs - 1, step, args.num_batches, loss_value,
+                    datetime.now(), epoch, args.num_epochs, step, args.num_batches, loss_value,
                     top1_accuracy, topn_accuracy, examples_per_sec, sec_per_batch))
                     sys.stdout.flush()
 
@@ -169,14 +173,25 @@ def do_train(sess, args):
                     # save latest model
                     dnn_model.save(sess, latest_checkpoint_path)
 
-            # Save the model checkpoint periodically after each training epoch
-            if epoch in perm_save_epochs:
-                dnn_model.save(sess, perm_checkpoint_path, global_step=epoch)
+                # save permanent
+                if utils.do_permanent_save(epoch - 1, step + 1, args.num_batches, perm_save_epochs, step_resolution=1):
+                    from termcolor import colored
+                    print(colored("Epoch {} should be saved permanently (permanent save epochs = {})".format(
+                        round(epoch - 1 + (step + 1) / args.num_batches, 2), perm_save_epochs), 'red'))
+                    dnn_model.save(sess,
+                                   "{}-{}".format(
+                                       perm_checkpoint_path,
+                                       str(round(epoch - 1 + (step + 1) / args.num_batches, 2)).replace('.', '_')),
+                                   global_step=None)
 
-            dnn_model.save(sess, latest_checkpoint_path)
+            # # Save the model checkpoint periodically after each training epoch
+            # if epoch in perm_save_epochs:
+            #     dnn_model.save(sess, perm_checkpoint_path, global_step=epoch)
+
+            # dnn_model.save(sess, latest_checkpoint_path)
 
             print("Epoch %d of %d ended. a checkpoint saved at %s" % (
-            epoch, start_epoch + args.num_epochs - 1, args.log_dir))
+            epoch, args.num_epochs, args.log_dir))
             sys.stdout.flush()
             # if validation data are provided, evaluate accuracy on the validation set after the end of each epoch
             if args.run_validation:
@@ -365,7 +380,7 @@ def main():  # pylint: disable=unused-argument
                         help='Path for saving Tensorboard info and checkpoints')
     parser.add_argument('--delete_log_dir_content', default=False, type=bool, help='Delete existing content in log_dir')
     parser.add_argument('--snapshot_prefix', default='latest_ckpt', action='store', help='Prefix for checkpoint files')
-    parser.add_argument('--num_save_model_segments', default=10, help='Number of permanent checkpoints to keep')
+    parser.add_argument('--num_save_model_segments', type=int, default=10, help='Number of permanent checkpoints to keep')
     parser.add_argument('--architecture', default='resnet50', help='The DNN architecture')
     parser.add_argument('--run_name', default='Run' + str(time.strftime("-%d-%m-%Y_%H-%M-%S")), action='store',
                         help='Name of the experiment')
@@ -374,6 +389,9 @@ def main():  # pylint: disable=unused-argument
                         help='Whether to log device placement or not')
     parser.add_argument('--delimiter', default=' ', action='store', help='Delimiter of the input files')
     parser.add_argument('--retrain_from', default=None, action='store', help='Continue Training from a snapshot file')
+    parser.add_argument('--overwrite_start_epoch_num', default=None, type=int,
+                        help='Manually overwrite start epoch num after loading model '
+                             '(to make up for previous accumulated errors in epoch num)')
     parser.add_argument('--log_debug_info', default=False, action='store', help='Logging runtime and memory usage info')
     parser.add_argument('--num_batches', default=-1, type=int, action='store', help='The number of batches per epoch')
     parser.add_argument('--transfer_mode', default=[0], nargs='+', type=int,

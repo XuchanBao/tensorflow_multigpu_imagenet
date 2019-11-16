@@ -113,3 +113,15 @@ def get_optimizer(opt_type, lr):
   else:
     print("invalid optimizer")
     return None
+
+
+def do_permanent_save(finished_epochs, current_step, num_batches_per_epoch, perm_save_epoch_list, step_resolution=1):
+    # Whether to permanently save model at this step
+
+    current_epoch_float = finished_epochs + current_step / float(num_batches_per_epoch)
+    delta_epoch_float = step_resolution / float(num_batches_per_epoch)
+
+    closest_per_epoch = min([e for e in perm_save_epoch_list if e >= current_epoch_float])
+
+    # if next step will overshoot, then save model at this step (return True), else return False
+    return current_epoch_float + delta_epoch_float > closest_per_epoch
