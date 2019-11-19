@@ -12,14 +12,15 @@ import utils
 from images.caffe_classes import class_names
 
 
-save_model_filename = 'epoch-3_2'
-
 parser = argparse.ArgumentParser()
 parser.add_argument('--checkpoint_dir', type=str,
                     default='experiments/googlenet/checkpoints')
 parser.add_argument('--save_pb_dir', type=str, default='experiments/googlenet/pb')
+parser.add_argument('--save_model_filename', type=str, help='Model filename, e.g. epoch-3_2')
+
 args = parser.parse_args()
 
+save_model_filename = args.save_model_filename
 checkpoint_path = "{}/{}".format(args.checkpoint_dir, save_model_filename)
 save_pb_dir = args.save_pb_dir
 
